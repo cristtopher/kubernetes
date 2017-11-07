@@ -1,0 +1,69 @@
+---
+Author: Cristtopher Quintana T <cquintana@axxezo.com>
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openvpn
+data:
+  dh.pem: <base64_encoded_dh_pem_file>
+  certs.p12: <base64_encoded_certs_file>
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: openvpn
+  labels:
+    name: openvpn
+spec:
+  replicas: 2
+  selector:
+    name: openvpn
+  template:
+    metadata:
+      labels:
+        name: openvpn
+    spec:
+      containers:
+        - name: openvpn
+          image: offlinehacker/openvpn-k8s
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          env:
+            - name: OVPN_NETWORK
+              value: 10.240.0.0
+            - name: OVPN_SUBNET
+              value: 255.255.0.0
+            - name: OVPN_PROTO
+              value: tcp
+            - name: OVPN_K8S_SERVICE_NETWORK
+              value: 10.241.240.0
+            - name: OVPN_K8S_SERVICE_SUBNET
+              value: 255.255.240.0
+            - name: OVPN_K8S_DNS
+              value: 10.241.240.10
+          ports:
+            - name: openvpn
+              containerPort: 1194
+          volumeMounts:
+            - mountPath: /etc/openvpn/pki
+              name: openvpn
+      volumes:
+        - name: openvpn
+          secret:
+            secretName: openvpn
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: openvpn
+spec:
+  ports:
+    - name: openvpn
+      port: 1194
+      targetPort: 1194
+  selector:
+    name: openvpn
+  type: LoadBalancer

@@ -1,0 +1,50 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: access-control
+  namespace: production
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels: # labels to select/identify the deployment
+        app: access-control
+        env: production
+    spec:     # pod spec                  
+      containers:
+      - name: backend
+        image: "axxezo.azurecr.io/ac-backend"
+        env:
+        - name: NODE_ENV
+          value: production
+        ports:
+          - containerPort: 5001
+      - name: frontend
+        image: "axxezo.azurecr.io/ac-frontend"
+        env:
+        - name: NODE_ENV
+          value: prod
+        ports:
+          - containerPort: 80
+      imagePullSecrets:
+        - name: azurecr
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: access-control
+  namespace: production
+  labels:
+    app: access-control
+spec: 
+  ports:
+  - name: backend
+    port: 5001
+    targetPort: 5001
+  - name: frontend
+    port: 80
+    targetPort: 80
+  clusterIP: 10.0.171.239
+  type: NodePort
+  selector:
+    app: access-control
